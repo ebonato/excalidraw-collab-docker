@@ -3,8 +3,6 @@ FROM --platform=${BUILDPLATFORM} node:18 AS build
 
 WORKDIR /opt/node_app
 
-COPY . .
-
 ARG CACHE_INVALIDATOR
 ARG VITE_APP_WS_SERVER_URL=https://oss-collab.excalidraw.com
 ENV VITE_APP_WS_SERVER_URL=$VITE_APP_WS_SERVER_URL
