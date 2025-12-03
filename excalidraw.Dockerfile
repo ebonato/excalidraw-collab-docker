@@ -1,7 +1,9 @@
 # excalidraw.Dockerfile
-FROM node:18 AS build
+FROM --platform=${BUILDPLATFORM} node:18 AS build
 
-WORKDIR /app
+WORKDIR /opt/node_app
+
+COPY . .
 
 ARG CACHE_INVALIDATOR
 ARG VITE_APP_WS_SERVER_URL=https://oss-collab.excalidraw.com
@@ -12,10 +14,18 @@ RUN echo "Cache invalidator: $CACHE_INVALIDATOR"
 # Clone the Excalidraw repo directly
 RUN git clone --depth 1 https://github.com/excalidraw/excalidraw.git .
 
-RUN yarn --network-timeout 600000
-RUN yarn build:app:docker
+# do not ignore optional dependencies:
+# Error: Cannot find module @rollup/rollup-linux-x64-gnu
+RUN --mount=type=cache,target=/root/.cache/yarn \
+    npm_config_target_arch=${TARGETARCH} yarn --network-timeout 600000
+
+ARG NODE_ENV=production
+
+RUN npm_config_target_arch=${TARGETARCH} yarn build:app:docker
 
 # Production image
-FROM nginx:1.27-alpine
-COPY --from=build /app/excalidraw-app/build /usr/share/nginx/html
+FROM --platform=${TARGETPLATFORM} nginx:1.27-alpine
+
+COPY --from=build /opt/node_app/excalidraw-app/build /usr/share/nginx/html
+
 HEALTHCHECK CMD wget -q -O /dev/null http://localhost || exit 1
